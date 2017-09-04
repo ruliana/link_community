@@ -16,6 +16,16 @@ module LinkCommunity
       self
     end
 
+    def links
+      pairs_of_nodes = @graph.reduce(Set()) do |set, (node, neighbors)|
+        set + neighbors.map { |other| Set(node, other) }.to_set
+      end
+
+      pairs_of_nodes.map do |nodes|
+        Link(*nodes)
+      end.to_set
+    end
+
     def neighbors(v)
       @graph.fetch(v, EMPTY_SET)
     end
@@ -27,6 +37,11 @@ module LinkCommunity
     def similarity(link1, link2)
       share = link1.share_nodes(link2)
       share.similarity_on(self)
+    end
+
+    def link_community
+      slink = Slink.new(links.to_a)
+      slink.call { |a, b| 1 - similarity(a, b) }
     end
   end
 end

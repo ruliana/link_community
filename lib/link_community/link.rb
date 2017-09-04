@@ -6,6 +6,15 @@ module LinkCommunity
   end
 
   Link = Struct.new(:a, :b) do
+    def eql?(other)
+      (a == other.a && b == other.b) || (b == other.a && a == other.b)
+    end
+    alias_method :==, :eql?
+
+    def hash
+      Set(a, b).hash
+    end
+
     def add_itself_to(graph)
       graph.add_link(a, b)
       graph.add_link(b, a)
@@ -17,9 +26,13 @@ module LinkCommunity
     end
 
     def share_not_share(*nodes)
-      mine = Set[a, b]
+      mine = Set(a, b)
       others = Set.new(nodes)
       [mine & others, mine ^ others]
+    end
+
+    def inspect
+      format "(%s)-(%s)", a.inspect, b.inspect
     end
   end
 
