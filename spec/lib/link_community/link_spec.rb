@@ -7,6 +7,13 @@ describe Link do
     expect(Link(1, 2)).to eq(Link(1, 2))
   end
 
+  describe "#==" do
+    it "is equal no matter the order" do
+      expect(Link(1, 2)).to eq(Link(1, 2))
+      expect(Link(1, 2)).to eq(Link(2, 1))
+    end
+  end
+
   describe "#share_nodes" do
     context "1-2 and 3-4" do
       subject { Link(1, 2).share_nodes(Link(3, 4)) }

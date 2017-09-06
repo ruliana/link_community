@@ -12,10 +12,7 @@ module LinkCommunity
     def ==(other)
       level == other.level && members == other.members
     end
-
-    def eql?(other)
-      level == other.level && members == other.members
-    end
+    alias eql? ==
 
     def hash
       [level, members].hash

@@ -48,7 +48,7 @@ describe Slink do
   context "with [9, 1, 8, 2]" do
     subject { Slink.new([9, 1, 8, 2, 5, 4]) }
 
-    it "groups as [1, [8, 9]]" do
+    it "groups as [[8, 9], [[1,2], [3, 4]]]" do
       expect(subject.call(&distance)).to eq(Group.new(3,
                                                       Group.new(1, 8, 9),
                                                       Group.new(2,
