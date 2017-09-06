@@ -56,7 +56,7 @@ describe Graph do
 
   describe "#link_community" do
     it "group the links" do
-      expect(subject.link_community)
+      expect(subject.link_community.groups)
         .to eq(Group.new(5 / 6,
                          Group.new(0.80, Link(:a, :b), Link(:b, :c)),
                          Group.new(0.40,

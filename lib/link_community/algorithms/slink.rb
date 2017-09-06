@@ -1,6 +1,53 @@
 # frozen_string_literal: true
 
 module LinkCommunity
+  class Dendrogram
+    def initialize(data, heights, parents)
+      @data = data
+      @parents = parents
+      @packs = build_packs(heights)
+    end
+
+    def levels
+      @levels ||= @packs.group_by { |h, _i| h }.transform_values(&:size)
+    end
+
+    def groups
+      @groups ||= begin
+                    first, *rest = @packs
+                    mount(rest, first)
+                  end
+    end
+
+    private
+
+    def build_packs(heights)
+      heights.each_with_index
+             .map { |h, i| [h, @data[i], @data[@parents[i]]] }
+             .sort_by { |h, *_| h }
+             .reverse
+             .drop(1) # Drop infinity
+    end
+
+    def mount(packs, head)
+      level, a, b = head
+      return Group.new(level, a, b) if packs.empty?
+
+      a = build(packs, a)
+      b = build(packs, b)
+
+      Group.new(level, a, b)
+    end
+
+    def build(packs, element)
+      rslt = packs.drop_while { |_, left, right| left != element && right != element }
+      return element if rslt.empty?
+
+      first, *rest = rslt
+      mount(rest, first)
+    end
+  end
+
   class Group
     attr_reader :level, :members
 
@@ -32,8 +79,7 @@ module LinkCommunity
     def call
       size = @data.size
 
-      return Group.new if @data.empty?
-      return Group.new(Float::INFINITY, @data.first) if @data.size == 1
+      return Dendrogram.new(@data, [Float::INFINITY], @data) if @data.size == 1
 
       height = Array.new(size)
       parent = Array.new(size)
@@ -62,38 +108,7 @@ module LinkCommunity
         end
       end
 
-      pack(height, parent)
-    end
-
-    private
-
-    def pack(height, parent)
-      packs = height.each_with_index
-                    .map { |h, i| [h, @data[i], @data[parent[i]]] }
-                    .sort_by { |h, *_| h }
-                    .reverse
-                    .drop(1) # Drop infinity
-
-      first, *rest = packs
-      mount(rest, first)
-    end
-
-    def mount(packs, head)
-      level, a, b = head
-      return Group.new(level, a, b) if packs.empty?
-
-      a = build(packs, a)
-      b = build(packs, b)
-
-      Group.new(level, a, b)
-    end
-
-    def build(packs, element)
-      rslt = packs.drop_while { |_, left, right| left != element && right != element }
-      return element if rslt.empty?
-
-      first, *rest = rslt
-      mount(rest, first)
+      Dendrogram.new(@data, height, parent)
     end
   end
 end
