@@ -18,12 +18,8 @@ describe Link do
     context "1-2 and 3-4" do
       subject { Link(1, 2).share_nodes(Link(3, 4)) }
 
-      it "share nothing" do
-        expect(subject.shared).to eq([])
-      end
-
-      it "does no share 1, 2, 3, 4" do
-        expect(subject.not_shared).to match_array([1, 2, 3, 4])
+      it "no similarity" do
+        expect(subject).to be_kind_of(SharedEmpty)
       end
     end
 
@@ -43,11 +39,7 @@ describe Link do
       subject { Link(1, 2).share_nodes(Link(2, 1)) }
 
       it "shares all" do
-        expect(subject.shared).to match_array([1, 2])
-      end
-
-      it "not shares is empty" do
-        expect(subject.not_shared).to eq([])
+        expect(subject).to be_kind_of(SharedMax)
       end
     end
   end

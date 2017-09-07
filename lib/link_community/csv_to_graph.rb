@@ -9,13 +9,13 @@ module LinkCommunity
     end
 
     def to_graph
-      graph = Graph.new
-      open(@file_name) do |file|
-        CSV.new(file, headers: true).each do |row|
-          graph.add(Link(row[0], row[1]))
+      Graph.build do |graph|
+        open(@file_name) do |file|
+          CSV.new(file, headers: true).each do |row|
+            graph.add(Link(row[0], row[1]))
+          end
         end
       end
-      graph
     end
   end
 end

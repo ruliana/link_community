@@ -19,6 +19,7 @@ require "link_community/version"
 require "link_community/link"
 require "link_community/path"
 require "link_community/graph"
+require "link_community/graph_builder"
 
 # Algorithms
 require "link_community/algorithms/slink"

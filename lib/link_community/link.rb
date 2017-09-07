@@ -32,28 +32,86 @@ module LinkCommunity
       graph.add_link(b, a)
     end
 
-    def share_nodes(other)
-      shared, not_shared = other.share_not_share(to_a)
-      Shared.new(shared, not_shared)
+    def nodify_with(graph)
+      Link(graph.find_node(a),
+           graph.find_node(b))
     end
 
-    def share_not_share(others)
-      mine = to_a
-      [mine & others, mine ^ others]
+    def indexify_with(graph)
+      Link(graph.find_index(a),
+           graph.find_index(b))
     end
+
+    def share_nodes(other)
+      other.share_not_share(a, b)
+    end
+
+    # rubocop:disable Metrics/MethodLength, Metrics/PerceivedComplexity
+    # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
+    def share_not_share(c, d)
+      # This method is odd due optimization!
+
+      # Equivalent to (but faster):
+      # mine = to_a
+      # [mine & other, mine ^ other]
+      if a != c && a != d && b != c && b != d
+        # Avoid memory allocation & calculation
+        # for most common (and trivial) case
+        SHARED_EMPTY
+      elsif a == c && d != b
+        Shared.new([a], [d, b])
+      elsif a == d && c != b
+        Shared.new([a], [c, b])
+      elsif b == c && d != a
+        Shared.new([b], [d, a])
+      elsif b == d && c != a
+        Shared.new([b], [c, a])
+      else
+        # Trivial case (same nodes)
+        SHARED_MAX
+      end
+    end
+    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity
+    # rubocop:enable Metrics/MethodLength, Metrics/PerceivedComplexity
 
     def inspect
       format "(%s)-(%s)", a.inspect, b.inspect
     end
   end
 
-  Shared = Struct.new(:shared, :not_shared) do
+  class SharedEmpty
+    def similarity_on(_graph)
+      0
+    end
+  end
+  SHARED_EMPTY = SharedEmpty.new
+
+  class SharedMax
+    def similarity_on(_graph)
+      1
+    end
+  end
+  SHARED_MAX = SharedMax.new
+
+  class Shared
+    attr_reader :shared, :not_shared
+
+    def initialize(shared, not_shared)
+      @shared, @not_shared = shared, not_shared
+    end
+
     def similarity_on(graph)
-      return 0 if shared.empty?
-      neighbors = not_shared.map { |n| graph.neighbors_me(n).to_a }
-      shared_neighbors = neighbors.reduce { |set, n| set & n }
-      all_neighbors = neighbors.flatten(1).uniq
+      return 0 if @shared.empty?
+      neigh = neighbors(graph)
+      shared_neighbors = neigh.reduce { |set, n| set & n }
+      all_neighbors = neigh.flatten(1).uniq
       shared_neighbors.size / all_neighbors.size.to_f
+    end
+
+    private
+
+    def neighbors(graph)
+      @not_shared.map { |n| graph.neighbors_me(n) }
     end
   end
 end

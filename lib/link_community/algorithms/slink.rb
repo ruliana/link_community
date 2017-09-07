@@ -65,6 +65,17 @@ module LinkCommunity
       [level, members].hash
     end
 
+    def nodify_with(graph)
+      new_members = members.map do |member|
+        if member.respond_to?(:nodify_with)
+          member.nodify_with(graph)
+        else
+          graph.find_node(member)
+        end
+      end
+      Group.new(level, *new_members)
+    end
+
     def inspect
       return "()" if members.empty?
       format("([%0.2f], %s)", level, members.map(&:inspect).join(", "))
