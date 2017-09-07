@@ -5,14 +5,26 @@ module LinkCommunity
     Link.new(a, b)
   end
 
-  Link = Struct.new(:a, :b) do
+  class Link
+    using ArrayRefinement
+
+    attr_accessor :a, :b
+
+    def initialize(a, b)
+      @a, @b = a, b
+    end
+
     def eql?(other)
       (a == other.a && b == other.b) || (b == other.a && a == other.b)
     end
-    alias_method :==, :eql?
+    alias == eql?
 
     def hash
-      Set(a, b).hash
+      @hash ||= Set(a, b).hash
+    end
+
+    def to_a
+      @to_a ||= [a, b]
     end
 
     def add_itself_to(graph)
@@ -21,13 +33,12 @@ module LinkCommunity
     end
 
     def share_nodes(other)
-      shared, not_shared = other.share_not_share(a, b)
+      shared, not_shared = other.share_not_share(to_a)
       Shared.new(shared, not_shared)
     end
 
-    def share_not_share(*nodes)
-      mine = Set(a, b)
-      others = Set.new(nodes)
+    def share_not_share(others)
+      mine = to_a
       [mine & others, mine ^ others]
     end
 
@@ -39,9 +50,9 @@ module LinkCommunity
   Shared = Struct.new(:shared, :not_shared) do
     def similarity_on(graph)
       return 0 if shared.empty?
-      neighbors = not_shared.map { |n| graph.neighbors_me(n) }
+      neighbors = not_shared.map { |n| graph.neighbors_me(n).to_a }
       shared_neighbors = neighbors.reduce { |set, n| set & n }
-      all_neighbors = neighbors.reduce { |set, n| set + n }
+      all_neighbors = neighbors.flatten(1).uniq
       shared_neighbors.size / all_neighbors.size.to_f
     end
   end

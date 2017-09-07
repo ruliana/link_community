@@ -11,9 +11,17 @@ module LinkCommunity
   end
 end
 
+# Extra methods (utilities)
+require "link_community/refinements/array"
+
+# Core entities
 require "link_community/version"
 require "link_community/link"
 require "link_community/path"
 require "link_community/graph"
 
+# Algorithms
 require "link_community/algorithms/slink"
+
+# Utilities
+require "link_community/csv_to_graph"

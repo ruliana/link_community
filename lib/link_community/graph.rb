@@ -17,13 +17,13 @@ module LinkCommunity
     end
 
     def links
-      pairs_of_nodes = @graph.reduce(Set()) do |set, (node, neighbors)|
-        set + neighbors.map { |other| Set(node, other) }.to_set
+      rslt = Set.new
+      @graph.each do |node, neighbors|
+        neighbors.each do |other|
+          rslt << Link(node, other)
+        end
       end
-
-      pairs_of_nodes.map do |nodes|
-        Link(*nodes)
-      end.to_set
+      rslt
     end
 
     def neighbors(v)
@@ -31,7 +31,8 @@ module LinkCommunity
     end
 
     def neighbors_me(v)
-      Set[v] + neighbors(v)
+      @neighbors_me ||= Hash.new { |h, k| h[k] = Set[k] + neighbors(k) }
+      @neighbors_me[v]
     end
 
     def similarity(link1, link2)

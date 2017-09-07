@@ -85,7 +85,23 @@ module LinkCommunity
       parent = Array.new(size)
       distance_to_n = Array.new(size)
 
+      start = Time.now
+      counter = 1
+      puts "start #{size}"
+      printf "Passed: %6dr, %6.1fs, %6.2fr/s, eta %6dmin", 0, 0, 0, 0
       size.times do |n|
+        counter += 1
+        elapsed = Time.now - start
+        if (counter % 100).zero?
+          printf "\b" * 51
+          printf "Passed: %6dr, %6.1fs, %6.2fr/s, eta %6dmin",
+                 counter,
+                 elapsed,
+                 counter / elapsed.to_f,
+                 size / (counter / elapsed.to_f) / 60
+          STDOUT.flush
+        end
+
         parent[n] = n
         height[n] = Float::INFINITY
 

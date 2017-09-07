@@ -19,11 +19,11 @@ describe Link do
       subject { Link(1, 2).share_nodes(Link(3, 4)) }
 
       it "share nothing" do
-        expect(subject.shared).to eq(Set())
+        expect(subject.shared).to eq([])
       end
 
       it "does no share 1, 2, 3, 4" do
-        expect(subject.not_shared).to eq(Set(1, 2, 3, 4))
+        expect(subject.not_shared).to match_array([1, 2, 3, 4])
       end
     end
 
@@ -31,11 +31,11 @@ describe Link do
       subject { Link(1, 2).share_nodes(Link(2, 3)) }
 
       it "shares 2" do
-        expect(subject.shared).to eq(Set(2))
+        expect(subject.shared).to eq([2])
       end
 
       it "not shares 1, 3" do
-        expect(subject.not_shared).to eq(Set(1, 3))
+        expect(subject.not_shared).to match_array([1, 3])
       end
     end
 
@@ -43,11 +43,11 @@ describe Link do
       subject { Link(1, 2).share_nodes(Link(2, 1)) }
 
       it "shares all" do
-        expect(subject.shared).to eq(Set(1, 2))
+        expect(subject.shared).to match_array([1, 2])
       end
 
       it "not shares is empty" do
-        expect(subject.not_shared).to eq(Set())
+        expect(subject.not_shared).to eq([])
       end
     end
   end

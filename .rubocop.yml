@@ -75,4 +75,5 @@ Style/MethodName:
 
 Metrics/BlockLength:
   Exclude:
-    - 'spec/**/*'
+    - "spec/**/*"
+    - "link_community.gemspec"
