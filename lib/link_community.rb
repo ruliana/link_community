@@ -20,6 +20,7 @@ require "link_community/link"
 require "link_community/path"
 require "link_community/graph"
 require "link_community/graph_builder"
+require "link_community/dendro"
 
 # Algorithms
 require "link_community/algorithms/slink"

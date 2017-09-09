@@ -19,6 +19,17 @@ module LinkCommunity
                   end
     end
 
+    def dendro
+      @dendro ||= begin
+                    first, *rest = @packs
+                    lvl, a, b = first
+                    seed = Dendro.new(a, b, level: lvl)
+                    builder = DendroBuilder.new(seed)
+                    rest.each { |p| builder.push(p) }
+                    builder.rslt
+                  end
+    end
+
     private
 
     def build_packs(heights)
@@ -26,7 +37,17 @@ module LinkCommunity
              .map { |h, i| [h, @data[i], @data[@parents[i]]] }
              .sort_by { |h, *_| h }
              .reverse
-             .drop(1) # Drop infinity
+             .drop(1) # Drop "infinity"
+    end
+
+    def build_groups(packs)
+      level, a, b = packs.first
+      head = Group.new(level, a, b)
+      packs.drop(1).each do |pack|
+        level, a, b = pack
+        pack = Group.new(level, a, b)
+        head.push(pack)
+      end
     end
 
     def mount(packs, head)
@@ -53,6 +74,13 @@ module LinkCommunity
 
     def initialize(level = nil, *members)
       @level = level || Float::INFINITY
+      members = members.flat_map do |m|
+        if m.is_a?(Group) && m.level == level
+          m.members.to_a
+        else
+          m
+        end
+      end
       @members = Set.new(members.compact)
     end
 

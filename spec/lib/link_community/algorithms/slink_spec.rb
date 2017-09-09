@@ -47,10 +47,10 @@ describe Slink do
     end
   end
 
-  context "with [9, 1, 8, 2]" do
+  context "with [9, 1, 8, 2, 5, 4]" do
     subject { Slink.new([9, 1, 8, 2, 5, 4]).call(&distance) }
 
-    it "groups as [[8, 9], [[1,2], [3, 4]]]" do
+    it "groups as [[8, 9], [[1, 2], [4, 5]]]" do
       expect(subject.levels).to eq(3 => 1, 2 => 1, 1 => 3)
       expect(subject.groups).to eq(Group.new(3,
                                              Group.new(1, 8, 9),
@@ -58,5 +58,25 @@ describe Slink do
                                                        Group.new(1, 1, 2),
                                                        Group.new(1, 4, 5))))
     end
+  end
+
+  context "with [9, 1, 7, 2, 3, 4]" do
+    subject { Slink.new([9, 1, 7, 2, 3, 4, 8]).call(&distance) }
+
+    it "groups as [[7, 8, 9], [1, 2, 3, 4]]" do
+      expect(subject.levels).to eq(3 => 1, 1 => 5)
+      expect(subject.groups).to eq(Group.new(3,
+                                             Group.new(1, 7, 8, 9),
+                                             Group.new(1, 1, 2, 3, 4)))
+    end
+  end
+
+  it "creates a nested structure" do
+    rslt = Slink.new([9, 1, 7, 2, 3, 4, 8]).call(&distance)
+    rslt = rslt.dendro
+
+    expect(rslt).to eq(Dendro.new(Dendro.new(1, 2, 3, 4, level: 1),
+                                  Dendro.new(7, 8, 9, level: 1),
+                                  level: 3))
   end
 end
