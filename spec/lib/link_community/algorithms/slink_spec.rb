@@ -10,7 +10,7 @@ describe Slink do
 
     it "returns empty group" do
       expect(subject.levels).to eq({})
-      expect(subject.groups).to eq(Group.new)
+      expect(subject.dendrogram).to eq(Dendro::EMPTY)
     end
   end
 
@@ -19,7 +19,7 @@ describe Slink do
 
     it "returns no group (odd, but there it is)" do
       expect(subject.levels).to eq({})
-      expect(subject.groups).to eq(Group.new)
+      expect(subject.dendrogram).to eq(Dendro::EMPTY)
     end
   end
 
@@ -27,7 +27,7 @@ describe Slink do
     subject { Slink.new([8, 9]).call(&distance) }
 
     it "returns a single group" do
-      expect(subject.groups).to eq(Group.new(1, 8, 9))
+      expect(subject.dendrogram).to eq(Dendro(1, [8, 9]))
     end
   end
 
@@ -35,7 +35,8 @@ describe Slink do
     subject { Slink.new([1, 8, 9]).call(&distance) }
 
     it "groups as [1, [8, 9]]" do
-      expect(subject.groups).to eq(Group.new(7, 1, Group.new(1, 8, 9)))
+      expect(subject.dendrogram).to eq(Dendro(7, [1,
+                                                  Dendro(1, [8, 9])]))
     end
   end
 
@@ -43,7 +44,8 @@ describe Slink do
     subject { Slink.new([9, 1, 8]).call(&distance) }
 
     it "groups as [1, [8, 9]]" do
-      expect(subject.groups).to eq(Group.new(7, 1, Group.new(1, 8, 9)))
+      expect(subject.dendrogram).to eq(Dendro(7, [1,
+                                                  Dendro(1, [8, 9])]))
     end
   end
 
@@ -52,11 +54,9 @@ describe Slink do
 
     it "groups as [[8, 9], [[1, 2], [4, 5]]]" do
       expect(subject.levels).to eq(3 => 1, 2 => 1, 1 => 3)
-      expect(subject.groups).to eq(Group.new(3,
-                                             Group.new(1, 8, 9),
-                                             Group.new(2,
-                                                       Group.new(1, 1, 2),
-                                                       Group.new(1, 4, 5))))
+      expect(subject.dendrogram).to eq(Dendro(3, [Dendro(1, [8, 9]),
+                                                  Dendro(2, [Dendro(1, [1, 2]),
+                                                             Dendro(1, [4, 5])])]))
     end
   end
 
@@ -65,18 +65,16 @@ describe Slink do
 
     it "groups as [[7, 8, 9], [1, 2, 3, 4]]" do
       expect(subject.levels).to eq(3 => 1, 1 => 5)
-      expect(subject.groups).to eq(Group.new(3,
-                                             Group.new(1, 7, 8, 9),
-                                             Group.new(1, 1, 2, 3, 4)))
+      expect(subject.dendrogram).to eq(Dendro(3, [Dendro(1, [7, 8, 9]),
+                                                  Dendro(1, [1, 2, 3, 4])]))
     end
   end
 
   it "creates a nested structure" do
     rslt = Slink.new([9, 1, 7, 2, 3, 4, 8]).call(&distance)
-    rslt = rslt.dendro
+    rslt = rslt.dendrogram
 
-    expect(rslt).to eq(Dendro.new(Dendro.new(1, 2, 3, 4, level: 1),
-                                  Dendro.new(7, 8, 9, level: 1),
-                                  level: 3))
+    expect(rslt).to eq(Dendro(3, [Dendro(1, [1, 2, 3, 4]),
+                                  Dendro(1, [7, 8, 9])]))
   end
 end

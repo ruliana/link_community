@@ -60,13 +60,17 @@ describe Graph do
 
   describe "#link_community" do
     it "group the links" do
-      expect(subject.link_community.groups.nodify_with(subject))
-        .to eq(Group.new(5 / 6,
-                         Group.new(0.80, Link(:a, :b), Link(:b, :c)),
-                         Group.new(0.40,
-                                   Group.new(0.00, Link(:c, :d), Link(:c, :f)),
-                                   Group.new(0.25, Link(:d, :f),
-                                             Group.new(0.00, Link(:d, :e), Link(:e, :f))))))
+      expect(subject.link_community.dendrogram.map { |link| link.nodify_with(subject) })
+        .to eq(Dendro(5 / 6, [
+                        Dendro(0.80, [Link(:a, :b), Link(:b, :c)]),
+                        Dendro(0.40, [
+                                 Dendro(0.00, [Link(:c, :d), Link(:c, :f)]),
+                                 Dendro(0.25, [
+                                          Link(:d, :f),
+                                          Dendro(0.00, [Link(:d, :e), Link(:e, :f)])
+                                        ])
+                               ])
+                      ]))
     end
   end
 end

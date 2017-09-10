@@ -51,12 +51,13 @@ module LinkCommunity
     def share_not_share(c, d)
       # This method is odd due optimization!
 
-      # Equivalent to (but faster):
+      # Equivalent to (but way faster):
       # mine = to_a
       # [mine & other, mine ^ other]
       if a != c && a != d && b != c && b != d
         # Avoid memory allocation & calculation
         # for most common (and trivial) case
+        # (huge gain here =/)
         SHARED_EMPTY
       elsif a == c && d != b
         Shared.new([a], [d, b])

@@ -5,7 +5,7 @@ module LinkCommunity
     def initialize(seed)
       @seed = seed
       @index = {}
-      push_dendro(@seed)
+      index(@seed)
       yield self if block_given?
     end
 
@@ -13,36 +13,37 @@ module LinkCommunity
       @seed
     end
 
-    def push_dendro(dendro)
+    def push(level, *members)
+      key, rslt = find_dendro_by(members)
+      if rslt.level == level
+        rslt.push(*members)
+        index(rslt)
+      elsif rslt.level > level
+        element = Dendro.new(*members, level: level)
+        rslt.members.delete(key)
+        rslt.push(element)
+        index(element)
+      else
+        raise "Can't add pack #{pack.inspect} to\n#{rslt.inspect} (pack is higher level)"
+      end
+    end
+
+    private
+
+    def find_dendro_by(members)
+      key = members.detect { |m| @index.key?(m) }
+      raise "Can't add pack level: #{level}, members: #{members.inspect}" if key.nil?
+      [key, @index[key]]
+    end
+
+    def index(dendro)
       dendro.members.each { |m| @index[m] = dendro }
-      dendro.children.each { |c| push_dendro(c) }
+      dendro.children.each { |c| index(c) }
     end
+  end
 
-    def push(pack)
-      level, a, b = pack
-      rslt = @index[a] || @index[b]
-      raise "Can't add pack #{pack.inspect}" if rslt.nil?
-
-      rslt = if rslt.level == level
-               rslt
-             elsif rslt.level > level
-               rslt.members.delete(a)
-               rslt.members.delete(b)
-               element = Dendro.new(level: level)
-               rslt.children << element
-               element
-             else
-               raise "Can't add pack #{pack.inspect} to\n#{rslt.inspect}"
-             end
-
-      rslt.members << a
-      rslt.members << b
-
-      @index[a] = rslt
-      @index[b] = rslt
-
-      rslt
-    end
+  def Dendro(level, members)
+    Dendro.new(*members, level: level)
   end
 
   class Dendro
@@ -55,6 +56,8 @@ module LinkCommunity
       members.each { |m| push(m) }
     end
 
+    EMPTY = Dendro.new
+
     def ==(other)
       level == other.level &&
         members == other.members &&
@@ -66,16 +69,31 @@ module LinkCommunity
       [level, members, children.hash].hash
     end
 
-    def push(other)
-      if other.is_a?(Dendro)
-        push_trunk(other)
-      else
-        members << other
-      end
+    def inspect
+      format("Dendro(%0.1f, [%s])", level, (members.to_a + children.to_a.map(&:inspect)).join(", "))
+    end
+
+    def push(*others)
+      others.each { |e| push_one(e) }
+    end
+
+    def map
+      return enum_for(:map) unless block_given?
+      new_members = members.map { |m| yield m }
+      new_children = children.map { |c| c.map { |e| yield e } }
+      Dendro.new(*(new_members + new_children), level: level)
     end
   end
 
   private
+
+  def push_one(other)
+    if other.is_a?(Dendro)
+      push_trunk(other)
+    else
+      members << other
+    end
+  end
 
   def push_trunk(other)
     if other.level == level
