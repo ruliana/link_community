@@ -3,25 +3,20 @@
 module LinkCommunity
   class Dendrogram
     def initialize(data, heights, parents)
-      @data = data
-      @parents = parents
-      @packs = build_packs(heights)
+      @packs = build_packs(heights, data, parents)
     end
 
     def levels
-      @levels ||= @packs.group_by { |h, _i| h }.transform_values(&:size)
+      @packs.group_by { |h, _i| h }.transform_values(&:size)
     end
 
-    def dendro
-      @dendro ||= begin
-                    if @packs.empty?
-                      Dendro.new
-                    else
-                      build_dendogram(@packs)
-                    end
-                  end
+    def dendrogram
+      if @packs.empty?
+        Dendro.new
+      else
+        build_dendogram(@packs)
+      end
     end
-    alias dendrogram dendro
 
     private
 
@@ -34,9 +29,9 @@ module LinkCommunity
       builder.rslt
     end
 
-    def build_packs(heights)
+    def build_packs(heights, data, parents)
       heights.each_with_index
-             .map { |h, i| [h, @data[i], @data[@parents[i]]] }
+             .map { |h, i| [h, data[i], data[parents[i]]] }
              .sort_by { |h, *_| h }
              .reverse
              .drop(1) # Drop "infinity"
