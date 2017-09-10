@@ -83,6 +83,21 @@ module LinkCommunity
       new_children = children.map { |c| c.map { |e| yield e } }
       Dendro.new(*(new_members + new_children), level: level)
     end
+
+    # Groups splitted by _at least_ the desired level
+    def cut_by_level(desired)
+      if desired > level
+        [all_members]
+      else
+        members.map { |m| [m] } + @children.flat_map { |c| c.cut_by_level(desired) }
+      end
+    end
+
+    def all_members
+      children.reduce(members.to_a) do |rslt, c|
+        rslt + c.all_members
+      end
+    end
   end
 
   private

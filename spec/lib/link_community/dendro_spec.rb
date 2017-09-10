@@ -133,4 +133,82 @@ describe Dendro do
       expect(times2).to eq(Dendro(2, [2, Dendro(1, [6, 8]), Dendro(1, [12, 14])]))
     end
   end
+
+  describe "#cut_by_level" do
+    context "just one level" do
+      subject { Dendro(2, [1, 2]) }
+
+      it "cuts above include the members" do
+        expect(subject.cut_by_level(3)).to match_array([[1, 2]])
+      end
+
+      it "cuts on it separate members" do
+        expect(subject.cut_by_level(2)).to match_array([[1], [2]])
+      end
+
+      it "cuts below separate members" do
+        expect(subject.cut_by_level(1)).to match_array([[1], [2]])
+      end
+    end
+
+    context "two distinct levels" do
+      subject do
+        Dendro(2, [8, 10,
+                   Dendro(1, [1, 2]),
+                   Dendro(1, [4, 5, 6])])
+      end
+
+      it "cuts above makes a single group" do
+        expect(subject.cut_by_level(3))
+          .to match_array([match_array([1, 2, 4, 5, 6, 8, 10])])
+      end
+
+      it "cuts on it separates children" do
+        expect(subject.cut_by_level(2))
+          .to match_array([[1, 2], [4, 5, 6], [8], [10]])
+      end
+
+      it "cuts at second level below separates all children" do
+        expect(subject.cut_by_level(1))
+          .to match_array([[1], [2], [4], [5], [6], [8], [10]])
+      end
+
+      it "cuts lower level separates all children" do
+        expect(subject.cut_by_level(0.5))
+          .to match_array([[1], [2], [4], [5], [6], [8], [10]])
+      end
+    end
+
+    context "three distinct levels" do
+      subject do
+        Dendro(4, [14, 18,
+                   Dendro(3, [22,
+                              Dendro(2, [25, 27])]),
+                   Dendro(2, [8, 10,
+                              Dendro(1, [1, 2]),
+                              Dendro(1, [4, 5, 6])])])
+      end
+
+      it "cuts at 3" do
+        expect(subject.cut_by_level(3))
+          .to match_array([[14], [18],
+                           [22], [25, 27],
+                           match_array([1, 2, 4, 5, 6, 8, 10])])
+      end
+
+      it "cuts at 2.5" do
+        expect(subject.cut_by_level(3))
+          .to match_array([[14], [18],
+                           [22], [25, 27],
+                           match_array([1, 2, 4, 5, 6, 8, 10])])
+      end
+
+      it "cuts at 2" do
+        expect(subject.cut_by_level(2))
+          .to match_array([[14], [18],
+                           [22], [25], [27],
+                           [1, 2], [4, 5, 6], [8], [10]])
+      end
+    end
+  end
 end
