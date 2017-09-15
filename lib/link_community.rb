@@ -17,6 +17,20 @@ require "link_community/refinements/array"
 # Core entities
 require "link_community/version"
 require "link_community/link"
+require "link_community/weighted_link"
+
+module LinkCommunity
+  # Functional constructor for directed and
+  # undirected links.
+  def Link(from, to, weight = nil)
+    if weight
+      WeightedLink.new(from, to, weight)
+    else
+      Link.new(from, to)
+    end
+  end
+end
+
 require "link_community/path"
 require "link_community/graph"
 require "link_community/graph_builder"

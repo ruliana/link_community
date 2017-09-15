@@ -15,8 +15,8 @@ module LinkCommunity
       self
     end
 
-    def add_link(a, b)
-      @links << [a, b]
+    def add_link(link)
+      @links << link
     end
   end
 end

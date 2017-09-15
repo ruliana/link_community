@@ -12,8 +12,8 @@ module LinkCommunity
 
     def add_itself_to(graph)
       @nodes.each_cons(2) do |a, b|
-        graph.add_link(a, b)
-        graph.add_link(b, a)
+        graph.add_link(Link(a, b))
+        graph.add_link(Link(b, a))
       end
     end
   end

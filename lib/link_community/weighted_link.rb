@@ -1,45 +1,34 @@
 # frozen_string_literal: true
 
 module LinkCommunity
-  class Link
-    attr_accessor :a, :b
+  class WeightedLink
+    attr_accessor :a, :b, :w
 
-    def initialize(a, b)
-      @a, @b = a, b
+    def initialize(a, b, w)
+      @a, @b, @w = a, b, w
+    end
+
+    def weight
+      @w
     end
 
     def eql?(other)
-      (a == other.a && b == other.b) || (b == other.a && a == other.b)
+      w == other.w && (
+        (a == other.a && b == other.b) || (b == other.a && a == other.b)
+      )
     end
     alias == eql?
 
     def hash
-      @hash ||= Set(a, b).hash
-    end
-
-    def to_a
-      @to_a ||= [a, b]
+      @hash ||= [Set(a, b), w].hash
     end
 
     def add_itself_to(graph)
       graph.add_link(self)
-      graph.add_link(Link(b, a))
-    end
-
-    def nodify_with(graph)
-      Link(graph.find_node(a),
-           graph.find_node(b))
-    end
-
-    def indexify_with(graph)
-      Link(graph.find_index(a),
-           graph.find_index(b))
+      graph.add_link(Link(b, a, w))
     end
 
     def similarity_on(other, with:)
-      # This enumerates each case and avoids
-      # to allocate objects due performance.
-      # Ronie Uliana 2017-09-14
       c, d = other.a, other.b
       graph = with
 

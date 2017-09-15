@@ -13,21 +13,19 @@ module LinkCommunity
     end
 
     def nodes
-      @nodes ||= @raw_links.flatten(1).uniq.sort.freeze
+      @nodes ||= @raw_links.flat_map { |link| [link.a, link.b] }.uniq.sort.freeze
     end
 
     def edge_list
       @edge_list ||= begin
                        rslt = Array.new(nodes_size) { [] }
 
-                       @raw_links.uniq.map do |(a, b)|
-                         a_index = find_index(a)
-                         b_index = find_index(b)
-                         rslt[a_index] << b_index
-                         rslt[b_index] << a_index
+                       @raw_links.map do |link|
+                         link = link.indexify_with(self)
+                         rslt[link.a] << link
                        end
 
-                       rslt.map!(&:uniq).each(&:freeze).freeze
+                       rslt.each(&:freeze).freeze
                      end
     end
 
@@ -45,13 +43,7 @@ module LinkCommunity
     end
 
     def links_index
-      @links_index ||= begin
-                         rslt = []
-                         edge_list.each_with_index do |edges, a|
-                           edges.each { |b| rslt << Link(a, b) }
-                         end
-                         rslt.uniq.freeze
-                       end
+      @links_index ||= edge_list.flatten(1).uniq.freeze
     end
 
     def links_node
@@ -59,13 +51,12 @@ module LinkCommunity
     end
 
     def neighbors_index(index)
-      edge_list.fetch(index, [])
+      edge_list.fetch(index, []).map { |link| link.b }
     end
 
     def neighbors_node(node)
       index = find_index(node)
-      return [] if index.nil?
-      edge_list.fetch(index, []).map { |i| find_node(i) }.compact
+      neighbors_index(index).map { |i| find_node(i) }
     end
 
     def nodes_size
@@ -83,8 +74,7 @@ module LinkCommunity
     end
 
     def similarity(link1, link2)
-      share = link1.share_nodes(link2)
-      share.similarity_on(self)
+      link1.similarity_on(link2, with: self)
     end
 
     def link_community
