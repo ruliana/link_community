@@ -15,8 +15,8 @@ module LinkCommunity
       self
     end
 
-    def add_link(link)
-      @links << link
+    def add_link(from, to_reference)
+      @links << [from, to_reference]
     end
   end
 end

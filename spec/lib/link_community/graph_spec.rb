@@ -4,6 +4,89 @@ require "mathn"
 require "spec_helper"
 
 describe Graph do
+  context "weighted" do
+    subject do
+      Graph.build do |g|
+        g.add(Link(:a, :b, 2),
+              Link(:b, :c, 2),
+              Link(:c, :d, 3),
+              Link(:d, :e, 4),
+              Link(:e, :f, 4),
+              Link(:f, :c, 3),
+              Link(:d, :f, 4),
+              Link(:a, :g, 2),
+              Link(:b, :g, 2))
+      end
+    end
+
+    it "add link to the graph" do
+      require "byebug"
+      graph = Graph.build do |g|
+        g.add(Link(:a, :b, 1))
+      end
+
+      expect(graph.neighbors_node(:a)).to eq([:b])
+      expect(graph.neighbors_node(:b)).to eq([:a])
+    end
+
+    describe "#links" do
+      it "returns a list of links" do
+        expect(subject.links_node).to match_array([Link(:a, :b, 2),
+                                                   Link(:b, :c, 2),
+                                                   Link(:c, :d, 3),
+                                                   Link(:d, :e, 4),
+                                                   Link(:e, :f, 4),
+                                                   Link(:f, :c, 3),
+                                                   Link(:d, :f, 4),
+                                                   Link(:a, :g, 2),
+                                                   Link(:b, :g, 2)])
+      end
+    end
+
+    describe "link similarity" do
+      context "no shared node" do
+        it "has no similarity" do
+          expect(subject.similarity_node(Link(:a, :b, 1), Link(:c, :d, 3))).to eq 0
+        end
+      end
+
+      context "edges (c)-(d) and (c)-(f)" do
+        it "has similarity near 99.5" do
+          cd = Link(:c, :d, 3)
+          cf = Link(:c, :f, 3)
+          expect(subject.similarity_node(cd, cf)).to be_within(0.0001).of(0.996)
+        end
+      end
+
+      context "edges (e)-(d) and (e)-(f)" do
+        it "has similarity near 99.5" do
+          ed = Link(:e, :d, 3)
+          ef = Link(:e, :f, 3)
+          expect(subject.similarity_node(ed, ef)).to be_within(0.001).of(0.996)
+        end
+      end
+
+      context "edges (c)-(b) and (c)-(d)" do
+        it "has similarity near 99.5" do
+          ed = Link(:c, :b, 2)
+          ef = Link(:c, :d, 3)
+          expect(subject.similarity_node(ed, ef).to_f).to be_within(0.001).of(0.093)
+        end
+      end
+
+      context "edges (a)-(b)-(g)-(a)" do
+        it "(a)-(g) and (a)-(b) has similarity 3/4" do
+          expect(subject.similarity_node(Link(:a, :b, 2), Link(:a, :g, 2))).to eq(3 / 4)
+          expect(subject.similarity_node(Link(:g, :b, 2), Link(:a, :g, 2))).to eq(3 / 4)
+        end
+
+        it "(g)-(a) and (g) has similarity 1" do
+          expect(subject.similarity_node(Link(:b, :a, 2), Link(:b, :g, 2))).to eq(1)
+        end
+      end
+    end
+  end
+
   context "simple" do
     subject do
       Graph.build do |g|
@@ -31,22 +114,6 @@ describe Graph do
       expect(graph.neighbors_node(:c)).to eq(%i[b])
     end
 
-    describe "link similarity" do
-      context "no shared node" do
-        it "has no similarity" do
-          expect(subject.similarity_node(Link(:a, :b), Link(:c, :d))).to eq 0
-        end
-      end
-
-      context "share a node" do
-        it "has similarity 1/3" do
-          expect(subject.similarity_node(Link(:a, :b), Link(:b, :c))).to eq(1 / 5)
-          expect(subject.similarity_node(Link(:b, :c), Link(:c, :d))).to eq(1 / 6)
-          expect(subject.similarity_node(Link(:c, :f), Link(:f, :d))).to eq(3 / 5)
-        end
-      end
-    end
-
     describe "#links" do
       it "returns a list of links" do
         expect(subject.links_node).to match_array([Link(:a, :b),
@@ -72,6 +139,22 @@ describe Graph do
                                           ])
                                  ])
                         ]))
+      end
+    end
+
+    describe "link similarity" do
+      context "no shared node" do
+        it "has no similarity" do
+          expect(subject.similarity_node(Link(:a, :b), Link(:c, :d))).to eq 0
+        end
+      end
+
+      context "share a node" do
+        it "has similarity 1/3" do
+          expect(subject.similarity_node(Link(:a, :b), Link(:b, :c))).to eq(1 / 5)
+          expect(subject.similarity_node(Link(:b, :c), Link(:c, :d))).to eq(1 / 6)
+          expect(subject.similarity_node(Link(:c, :f), Link(:f, :d))).to eq(3 / 5)
+        end
       end
     end
   end

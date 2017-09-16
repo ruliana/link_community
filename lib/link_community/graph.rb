@@ -13,16 +13,18 @@ module LinkCommunity
     end
 
     def nodes
-      @nodes ||= @raw_links.flat_map { |link| [link.a, link.b] }.uniq.sort.freeze
+      @nodes ||= @raw_links.flat_map { |from, to_reference| [from, to_reference.node] }
+                           .uniq.sort.freeze
     end
 
     def edge_list
       @edge_list ||= begin
                        rslt = Array.new(nodes_size) { [] }
 
-                       @raw_links.map do |link|
-                         link = link.indexify_with(self)
-                         rslt[link.a] << link
+                       @raw_links.map do |(from, partial)|
+                         a = find_index(from)
+                         partial = partial.indexify_with(self)
+                         rslt[a] << partial
                        end
 
                        rslt.each(&:freeze).freeze
@@ -43,15 +45,21 @@ module LinkCommunity
     end
 
     def links_index
-      @links_index ||= edge_list.flatten(1).uniq.freeze
+      @links_index ||= edge_list.each_with_index
+                                .flat_map do |partials, from_node|
+        partials.map do |partial|
+          partial.complete_with(from_node)
+        end
+      end.uniq
     end
 
     def links_node
-      @links_node ||= links_index.map { |link| Link(find_node(link.a), find_node(link.b)) }.freeze
+      @links_node ||= links_index.map { |link| link.nodify_with(self) }.freeze
     end
 
     def neighbors_index(index)
-      edge_list.fetch(index, []).map { |link| link.b }
+      @neighbors_index ||= Array.new(nodes_size)
+      @neighbors_index[index] ||= edge_list.fetch(index, []).map(&:node)
     end
 
     def neighbors_node(node)
@@ -61,6 +69,10 @@ module LinkCommunity
 
     def nodes_size
       nodes.size
+    end
+
+    def neighbors_partial(index)
+      edge_list.fetch(index, [])
     end
 
     def neighbors_me(index)

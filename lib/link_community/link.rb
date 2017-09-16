@@ -2,6 +2,16 @@
 
 module LinkCommunity
   class Link
+    PartialLink = Struct.new(:node) do
+      def indexify_with(graph)
+        PartialLink.new(graph.find_index(node))
+      end
+
+      def complete_with(other_node)
+        Link.new(other_node, node)
+      end
+    end
+
     attr_accessor :a, :b
 
     def initialize(a, b)
@@ -22,8 +32,8 @@ module LinkCommunity
     end
 
     def add_itself_to(graph)
-      graph.add_link(self)
-      graph.add_link(Link(b, a))
+      graph.add_link(a, PartialLink.new(b))
+      graph.add_link(b, PartialLink.new(a))
     end
 
     def nodify_with(graph)

@@ -2,6 +2,16 @@
 
 module LinkCommunity
   class WeightedLink
+    PartialLink = Struct.new(:node, :weight) do
+      def indexify_with(graph)
+        PartialLink.new(graph.find_index(node), weight)
+      end
+
+      def complete_with(other_node)
+        WeightedLink.new(other_node, node, weight)
+      end
+    end
+
     attr_accessor :a, :b, :w
 
     def initialize(a, b, w)
@@ -13,9 +23,7 @@ module LinkCommunity
     end
 
     def eql?(other)
-      w == other.w && (
-        (a == other.a && b == other.b) || (b == other.a && a == other.b)
-      )
+      w == other.w && ((a == other.a && b == other.b) || (b == other.a && a == other.b))
     end
     alias == eql?
 
@@ -24,8 +32,20 @@ module LinkCommunity
     end
 
     def add_itself_to(graph)
-      graph.add_link(self)
-      graph.add_link(Link(b, a, w))
+      graph.add_link(a, PartialLink.new(b, w))
+      graph.add_link(b, PartialLink.new(a, w))
+    end
+
+    def nodify_with(graph)
+      Link(graph.find_node(a),
+           graph.find_node(b),
+           weight)
+    end
+
+    def indexify_with(graph)
+      Link(graph.find_index(a),
+           graph.find_index(b),
+           weight)
     end
 
     def similarity_on(other, with:)
@@ -50,13 +70,20 @@ module LinkCommunity
     private
 
     def similarity_with(graph, not_shared_a, not_shared_b)
-      neigh_a = graph.neighbors_me(not_shared_a)
-      neigh_b = graph.neighbors_me(not_shared_b)
+      neigh_a = graph.neighbors_partial(not_shared_a)
+      neigh_b = graph.neighbors_partial(not_shared_b)
 
-      shared_neighbors = neigh_a & neigh_b
-      all_neighbors = (neigh_a + neigh_b).uniq
+      a_weight = neigh_a.map(&:weight).sum / neigh_a.size
+      b_weight = neigh_b.map(&:weight).sum / neigh_b.size
 
-      shared_neighbors.size / all_neighbors.size.to_f
+      a_weights = ([[not_shared_a, a_weight]] + neigh_a.map { |p| [p.node, p.weight] }).to_h
+      b_weights = ([[not_shared_b, b_weight]] + neigh_b.map { |p| [p.node, p.weight] }).to_h
+
+      dot_prod = a_weights.reduce(0) { |rslt, (k, v)| rslt + (b_weights.fetch(k, 0) * v) }
+      a_norm_squared = a_weights.map { |_k, v| v**2 }.sum
+      b_norm_squared = b_weights.map { |_k, v| v**2 }.sum
+
+      dot_prod / (a_norm_squared + b_norm_squared - dot_prod)
     end
   end
 end
