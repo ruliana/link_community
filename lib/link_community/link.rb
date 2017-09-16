@@ -2,13 +2,19 @@
 
 module LinkCommunity
   class Link
-    PartialLink = Struct.new(:node) do
+    class PartialLink
+      attr_reader :node
+
+      def initialize(node)
+        @node = node
+      end
+
       def indexify_with(graph)
-        PartialLink.new(graph.find_index(node))
+        PartialLink.new(graph.find_index(@node))
       end
 
       def complete_with(other_node)
-        Link.new(other_node, node)
+        Link.new(other_node, @node)
       end
     end
 

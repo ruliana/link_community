@@ -2,13 +2,20 @@
 
 module LinkCommunity
   class WeightedLink
-    PartialLink = Struct.new(:node, :weight) do
+    class PartialLink
+      attr_reader :node, :weight
+
+      def initialize(node, weight)
+        @node = node
+        @weight = weight
+      end
+
       def indexify_with(graph)
-        PartialLink.new(graph.find_index(node), weight)
+        PartialLink.new(graph.find_index(@node), @weight)
       end
 
       def complete_with(other_node)
-        WeightedLink.new(other_node, node, weight)
+        WeightedLink.new(other_node, @node, @weight)
       end
     end
 
@@ -70,20 +77,20 @@ module LinkCommunity
     private
 
     def similarity_with(graph, not_shared_a, not_shared_b)
-      neigh_a = graph.neighbors_partial(not_shared_a)
-      neigh_b = graph.neighbors_partial(not_shared_b)
+      a_weights = weights_for(graph, not_shared_a)
+      b_weights = weights_for(graph, not_shared_b)
 
-      a_weight = neigh_a.map(&:weight).sum / neigh_a.size
-      b_weight = neigh_b.map(&:weight).sum / neigh_b.size
-
-      a_weights = ([[not_shared_a, a_weight]] + neigh_a.map { |p| [p.node, p.weight] }).to_h
-      b_weights = ([[not_shared_b, b_weight]] + neigh_b.map { |p| [p.node, p.weight] }).to_h
-
-      dot_prod = a_weights.reduce(0) { |rslt, (k, v)| rslt + (b_weights.fetch(k, 0) * v) }
-      a_norm_squared = a_weights.map { |_k, v| v**2 }.sum
-      b_norm_squared = b_weights.map { |_k, v| v**2 }.sum
+      dot_prod = a_weights.sum { |k, v| b_weights.fetch(k, 0) * v }
+      a_norm_squared = a_weights.sum { |_k, v| v**2 }
+      b_norm_squared = b_weights.sum { |_k, v| v**2 }
 
       dot_prod / (a_norm_squared + b_norm_squared - dot_prod)
+    end
+
+    def weights_for(graph, index)
+      partials = graph.neighbors_partial(index)
+      weight = partials.sum(&:weight) / partials.size
+      ([[index, weight]] + partials.map { |p| [p.node, p.weight] }).to_h
     end
   end
 end
