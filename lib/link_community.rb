@@ -9,19 +9,9 @@ module LinkCommunity
   def Set(*elements)
     Set.new(elements).freeze
   end
-end
 
-# Extra methods (utilities)
-require "link_community/refinements/array"
-
-# Core entities
-require "link_community/version"
-require "link_community/link"
-require "link_community/weighted_link"
-
-module LinkCommunity
-  # Functional constructor for directed and
-  # undirected links.
+  # Functional constructor for weighted and
+  # unweighted links.
   def Link(from, to, weight = nil)
     if weight
       WeightedLink.new(from, to, weight)
@@ -31,6 +21,16 @@ module LinkCommunity
   end
 end
 
+# Necessary to load functional constructors
+include LinkCommunity
+
+# Extra methods (utilities)
+require "link_community/refinements/array"
+
+# Core entities
+require "link_community/version"
+require "link_community/link"
+require "link_community/weighted_link"
 require "link_community/path"
 require "link_community/graph"
 require "link_community/graph_builder"

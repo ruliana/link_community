@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require "thor"
+require "link_community"
+
+class CLI < Thor
+  COLORS = %w[/dark26/1 /dark26/2 /dark26/3 /dark26/4 /dark26/5 /dark26/6].freeze
+
+  desc "merge DOT_FILES...", "Merge up to 6 dot files"
+  def merge(*files)
+    header = extract_header(files.first)
+    footer = "}\n"
+
+    middle = files.map { |f| extract_middle(f) }
+    middle = middle.zip(COLORS).flat_map do |mid, color|
+      mid.map { |line| line.sub(/;$/, %( [color="#{color}"];)) }
+    end
+
+    puts header
+    puts middle
+    puts footer
+  end
+
+  private
+
+  def extract_header(file)
+    open(File.join(Dir.pwd, file), "r") do |f|
+      f.each_line.take_while { |line| line !~ /->/ }
+    end
+  end
+
+  def extract_middle(file)
+    open(File.join(Dir.pwd, file), "r") do |f|
+      f.each_line.select { |line| line =~ /->/ }
+    end
+  end
+end
+
+CLI.start(ARGV)

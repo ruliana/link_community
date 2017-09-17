@@ -1,0 +1,89 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require "thor"
+require "link_community"
+
+class CLI < Thor
+  include LinkCommunity
+
+  desc "cluster CSV_FILE", "Create a cluster file (.dump)"
+  def cluster(csv_file_name)
+    prepare
+
+    puts "start!"
+    graph = CsvToGraph.new(csv_file_name).to_graph
+    puts "loaded!"
+    puts "start clustering ..."
+    rslt = graph.link_community
+    puts "end clustering!"
+
+    File.write(dump_file, Marshal.dump(rslt))
+
+    generate_graphviz(graph, rslt)
+  end
+
+  desc "graphviz CSV_FILE CLUSTER_FILE",
+       "Generate graphviz files from CSV and DUMP files"
+  def graphviz(csv_file_name, dump_file_name)
+    prepare
+
+    graph = CsvToGraph.new(csv_file_name).to_graph
+    rslt = Marshal.load(File.read(dump_file_name))
+    generate_graphviz(graph, rslt)
+  end
+
+  private
+
+  def partition_density(group)
+    link_count = group.size.to_f
+    node_count = group.flat_map { |link| [link.a, link.b] }.uniq.size.to_f - 1
+    possible_links = (((node_count + 1) * node_count) / 2) - node_count
+    current_links = link_count - node_count
+    current_links / possible_links
+  end
+
+  private def prepare
+    @now ||= Time.now.strftime("%Y-%m-%d-%H")
+    @rslt_dir ||= File.absolute_path("../rslt", __dir__)
+    @date_dir ||= File.join(@rslt_dir, @now)
+    @dump_file ||= format("%s/cluster-%s.dump", @rslt_dir, @now)
+
+    `mkdir -p #{@date_dir}`
+  end
+
+  def generate_graphviz(graph, rslt)
+    puts "building dendrogram..."
+    dendro = rslt.dendrogram
+    puts "built!"
+
+    puts "generating groups..."
+    groups = (0.1..1.0).step(0.1).flat_map do |level|
+      dendro.cut_by_level(level)
+            .reject { |group| group.size <= 2 }
+            .map { |group| [partition_density(group), group] }
+            .reject { |density, _group| density <= 0.00 }
+            .map { |density, group| [density, group.map { |link| link.nodify_with(graph) }] }
+    end
+    puts "generated!"
+
+    puts "saving graphviz files..."
+    groups.each do |density, group|
+      file_name = format("group_D%03d_C%04d.dot", density * 100, group.size)
+      open(File.join(date_dir, file_name), "w") do |file|
+        file << "digraph G {\n"
+        file << "  overlap = scale;\n"
+        file << "  outputorder = edgesfirst;\n"
+        file << "  node [style=filled fillcolor=white];\n"
+        group.each do |link|
+          file << format(%(  "%s" -> "%s";\n), link.a, link.b)
+        end
+        file << "}\n"
+      end
+    end
+    puts "saved!"
+  end
+end
+
+CLI.start(ARGV)

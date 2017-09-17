@@ -3,15 +3,22 @@
 /Gemfile.lock
 /_yardoc/
 /coverage/
-/data/
 /doc/
 /pkg/
 /spec/reports/
 /tmp/
 
+# Data source and process result
+/data/
+/rslt/
+
 *.dump
 test.rb
+
+# Ruby-prof results
 profile.*
 
 # rspec failure tracking
 .rspec_status
+
+.byebug_history
