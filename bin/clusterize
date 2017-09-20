@@ -6,8 +6,6 @@ require "thor"
 require "link_community"
 
 class CLI < Thor
-  include LinkCommunity
-
   desc "cluster CSV_FILE", "Create a cluster file (.dump)"
   def cluster(csv_file_name)
     prepare

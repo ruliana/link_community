@@ -1,43 +1,38 @@
 # frozen_string_literal: true
 
 module LinkCommunity
-  class Link
-    attr_reader :a, :b, :w
+  class DirectedLink
+    attr_reader :a, :b
 
     def initialize(a, b)
       @a, @b = a, b
     end
 
-    def weight
-      w
-    end
-
     def eql?(other)
-      (a == other.a && b == other.b) || (b == other.a && a == other.b)
+      a == other.a && b == other.b
     end
     alias == eql?
 
     def hash
-      @hash ||= Set(a, b).hash
+      @hash ||= to_a.hash
     end
 
     def to_a
-      @to_a = [a, b]
+      @to_a ||= [a, b]
     end
 
     def add_itself_to(graph)
       graph.add_link(a, UnweightedPartialLink.new(self.class, b))
-      graph.add_link(b, UnweightedPartialLink.new(self.class, a))
     end
 
     def nodify_with(graph)
-      Link(graph.find_node(a),
-           graph.find_node(b))
+      DLink(graph.find_node(a),
+            graph.find_node(b))
     end
 
     def indexify_with(graph)
-      Link(graph.find_index(a),
-           graph.find_index(b))
+      DLink(graph.find_index(a),
+            graph.find_index(b))
     end
 
     def similarity_on(other, with:)

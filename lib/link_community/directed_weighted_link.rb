@@ -1,45 +1,44 @@
 # frozen_string_literal: true
 
 module LinkCommunity
-  class WeightedLink
-    attr_accessor :a, :b, :w
+  class DirectedWeightedLink
+    attr_reader :a, :b, :w
 
     def initialize(a, b, w)
       @a, @b, @w = a, b, w
     end
 
     def weight
-      w
+      @w
     end
 
     def eql?(other)
-      w == other.w && ((a == other.a && b == other.b) || (b == other.a && a == other.b))
+      w == other.w && a == other.a && b == other.b
     end
     alias == eql?
 
     def hash
-      @hash ||= [Set(a, b), w].hash
+      @hash ||= to_a.hash
     end
 
     def to_a
-      @to_a = [a, b, w]
+      @to_a ||= [a, b, w]
     end
 
     def add_itself_to(graph)
       graph.add_link(a, WeightedPartialLink.new(self.class, b, w))
-      graph.add_link(b, WeightedPartialLink.new(self.class, a, w))
     end
 
     def nodify_with(graph)
-      Link(graph.find_node(a),
-           graph.find_node(b),
-           weight)
+      DLink(graph.find_node(a),
+            graph.find_node(b),
+            weight)
     end
 
     def indexify_with(graph)
-      Link(graph.find_index(a),
-           graph.find_index(b),
-           weight)
+      DLink(graph.find_index(a),
+            graph.find_index(b),
+            weight)
     end
 
     def similarity_on(other, with:)
@@ -76,6 +75,7 @@ module LinkCommunity
 
     def weights_for(graph, index)
       partials = graph.neighbors_partial(index)
+      return [] if partials.empty?
       weight = partials.sum(&:weight) / partials.size
       ([[index, weight]] + partials.map { |p| [p.node, p.weight] }).to_h
     end

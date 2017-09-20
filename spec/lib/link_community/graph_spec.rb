@@ -4,6 +4,115 @@ require "mathn"
 require "spec_helper"
 
 describe Graph do
+  context "directed weighted" do
+    subject do
+      Graph.build do |g|
+        g.add(DLink(:a, :b, 2),
+              DLink(:b, :c, 2),
+              DLink(:c, :d, 3),
+              DLink(:d, :e, 4),
+              DLink(:e, :f, 4),
+              DLink(:f, :c, 3),
+              DLink(:d, :f, 4),
+              DLink(:a, :g, 2),
+              DLink(:b, :g, 2))
+      end
+    end
+
+    it "add link to the graph" do
+      graph = Graph.build do |g|
+        g.add(DLink(:a, :b, 1))
+      end
+
+      expect(graph.neighbors_node(:a)).to eq([:b])
+      expect(graph.neighbors_node(:b)).to eq([])
+    end
+
+    describe "#links" do
+      it "returns a list of links" do
+        expect(subject.links_node).to match_array([DLink(:a, :b, 2),
+                                                   DLink(:b, :c, 2),
+                                                   DLink(:c, :d, 3),
+                                                   DLink(:d, :e, 4),
+                                                   DLink(:e, :f, 4),
+                                                   DLink(:f, :c, 3),
+                                                   DLink(:d, :f, 4),
+                                                   DLink(:a, :g, 2),
+                                                   DLink(:b, :g, 2)])
+      end
+    end
+
+    describe "link similarity" do
+      context "no shared node" do
+        it "has no similarity" do
+          expect(subject.similarity_node(Link(:a, :b, 1), Link(:c, :d, 3))).to eq 0
+        end
+      end
+
+      context "share a node" do
+        it "has similarity " do
+          expect(subject.similarity_node(Link(:a, :g), Link(:b, :g))).to eq(0.5)
+          expect(subject.similarity_node(Link(:a, :b), Link(:a, :g))).to eq(0)
+          expect(subject.similarity_node(Link(:a, :b), Link(:b, :g))).to eq(0)
+        end
+      end
+    end
+  end
+
+  context "directed" do
+    subject do
+      Graph.build do |g|
+        g.add(DLink(:a, :b),
+              DLink(:b, :c),
+              DLink(:c, :d),
+              DLink(:d, :e),
+              DLink(:e, :f),
+              DLink(:f, :c),
+              DLink(:d, :f),
+              DLink(:a, :g),
+              DLink(:b, :g))
+      end
+    end
+
+    it "add link to the graph" do
+      graph = Graph.build do |g|
+        g.add(DLink(:a, :b))
+      end
+
+      expect(graph.neighbors_node(:a)).to eq([:b])
+      expect(graph.neighbors_node(:b)).to eq([])
+    end
+
+    describe "#links" do
+      it "returns a list of links" do
+        expect(subject.links_node).to match_array([DLink(:a, :b),
+                                                   DLink(:b, :c),
+                                                   DLink(:c, :d),
+                                                   DLink(:d, :e),
+                                                   DLink(:e, :f),
+                                                   DLink(:f, :c),
+                                                   DLink(:d, :f),
+                                                   DLink(:a, :g),
+                                                   DLink(:b, :g)])
+      end
+    end
+    describe "link similarity" do
+      context "no shared node" do
+        it "has no similarity" do
+          expect(subject.similarity_node(Link(:a, :b), Link(:c, :d))).to eq 0
+        end
+      end
+
+      context "share a node" do
+        it "has similarity " do
+          expect(subject.similarity_node(Link(:a, :g), Link(:b, :g))).to eq(0.5)
+          expect(subject.similarity_node(Link(:a, :b), Link(:a, :g))).to eq(1 / 3)
+          expect(subject.similarity_node(Link(:a, :b), Link(:b, :g))).to eq(1 / 3)
+        end
+      end
+    end
+  end
+
   context "weighted" do
     subject do
       Graph.build do |g|
@@ -20,7 +129,6 @@ describe Graph do
     end
 
     it "add link to the graph" do
-      require "byebug"
       graph = Graph.build do |g|
         g.add(Link(:a, :b, 1))
       end

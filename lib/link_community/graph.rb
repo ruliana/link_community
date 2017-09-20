@@ -86,7 +86,9 @@ module LinkCommunity
     end
 
     def similarity(link1, link2)
-      link1.similarity_on(link2, with: self)
+      link_a = edge_list[link1.a].find { |partial| partial.node == link1.b }.complete_with(link1.a)
+      link_b = edge_list[link2.a].find { |partial| partial.node == link2.b }.complete_with(link2.a)
+      link_a.similarity_on(link_b, with: self)
     end
 
     def link_community
