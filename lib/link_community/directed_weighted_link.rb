@@ -41,6 +41,14 @@ module LinkCommunity
             weight)
     end
 
+    def inspect
+      format("(%s)-[%0.1f]->(%s)", a, w, b)
+    end
+
+    def to_s
+      inspect
+    end
+
     def similarity_on(other, with:)
       c, d = other.a, other.b
       graph = with

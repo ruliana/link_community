@@ -59,18 +59,20 @@ module LinkCommunity
     EMPTY = Dendro.new
 
     def ==(other)
-      level == other.level &&
+      ((level == other.level) ||
+       (level - other.level).abs < 0.01) &&
         members == other.members &&
         children == other.children
     end
     alias eql? ==
 
     def hash
-      [level, members, children.hash].hash
+      # We want to compare groups "close enough" on tests
+      [format("%0.2f", level), members, children.hash].hash
     end
 
     def inspect
-      format("Dendro(%0.1f, [%s])", level, (members.to_a + children.to_a.map(&:inspect)).join(", "))
+      format("Dendro(%0.2f, [%s])", level, (members.to_a + children.to_a.map(&:inspect)).join(", "))
     end
 
     def push(*others)

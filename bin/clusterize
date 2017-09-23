@@ -11,13 +11,14 @@ class CLI < Thor
     prepare
 
     puts "start!"
+    puts "dump to: #{@dump_file}"
     graph = CsvToGraph.new(csv_file_name).to_graph
     puts "loaded!"
     puts "start clustering ..."
     rslt = graph.link_community
     puts "end clustering!"
 
-    File.write(dump_file, Marshal.dump(rslt))
+    File.write(@dump_file, Marshal.dump(rslt))
 
     generate_graphviz(graph, rslt)
   end
@@ -55,6 +56,8 @@ class CLI < Thor
     puts "building dendrogram..."
     dendro = rslt.dendrogram
     puts "built!"
+    require "byebug"
+    byebug
 
     puts "generating groups..."
     groups = (0.1..1.0).step(0.1).flat_map do |level|
@@ -68,8 +71,10 @@ class CLI < Thor
 
     puts "saving graphviz files..."
     groups.each do |density, group|
-      file_name = format("group_D%03d_C%04d.dot", density * 100, group.size)
-      open(File.join(date_dir, file_name), "w") do |file|
+      file_name = File.join(@date_dir,
+                            format("group_D%03d_C%04d.dot", density * 100, group.size))
+      printf("\t%s\n", file_name)
+      open(file_name, "w") do |file|
         file << "digraph G {\n"
         file << "  overlap = scale;\n"
         file << "  outputorder = edgesfirst;\n"

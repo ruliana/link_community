@@ -45,7 +45,7 @@ describe Graph do
     describe "link similarity" do
       context "no shared node" do
         it "has no similarity" do
-          expect(subject.similarity_node(Link(:a, :b, 1), Link(:c, :d, 3))).to eq 0
+          expect(subject.similarity_node(Link(:a, :b), Link(:c, :d))).to eq 0
         end
       end
 
@@ -56,6 +56,33 @@ describe Graph do
           expect(subject.similarity_node(Link(:a, :b), Link(:b, :g))).to eq(0)
         end
       end
+    end
+
+    it "group the links", focus: true do
+      expect(subject.link_community.dendrogram.map { |link| link.nodify_with(subject) })
+        .to eq(Dendro(1, [
+                        DLink(:a, :b, 2),
+                        Dendro(0.78, [
+                                 Dendro(0.75, [
+                                          DLink(:b, :c, 2),
+                                          DLink(:f, :c, 3)
+                                        ]),
+                                 Dendro(0.68, [
+                                          DLink(:d, :e, 4),
+                                          Dendro(0.67, [
+                                                   DLink(:c, :d, 3),
+                                                   Dendro(0.33, [
+                                                            DLink(:d, :f, 4),
+                                                            DLink(:e, :f, 4)
+                                                          ])
+                                                 ])
+                                        ])
+                               ]),
+                        Dendro(0.5, [
+                                 DLink(:a, :g, 2),
+                                 DLink(:b, :g, 2)
+                               ])
+                      ]))
     end
   end
 

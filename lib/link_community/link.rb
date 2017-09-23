@@ -40,6 +40,14 @@ module LinkCommunity
            graph.find_index(b))
     end
 
+    def inspect
+      format("(%s)-(%s)", a, b)
+    end
+
+    def to_s
+      inspect
+    end
+
     def similarity_on(other, with:)
       # This enumerates each case and avoids
       # to allocate objects due performance.

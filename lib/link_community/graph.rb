@@ -19,12 +19,12 @@ module LinkCommunity
 
     def edge_list
       @edge_list ||= begin
-                       rslt = Array.new(nodes_size) { [] }
+                       rslt = Array.new(nodes_size) { {} }
 
                        @raw_links.map do |(from, partial)|
                          a = find_index(from)
                          partial = partial.indexify_with(self)
-                         rslt[a] << partial
+                         rslt[a][partial.node] = partial
                        end
 
                        rslt.each(&:freeze).freeze
@@ -47,7 +47,7 @@ module LinkCommunity
     def links_index
       @links_index ||= edge_list.each_with_index
                                 .flat_map do |partials, from_node|
-        partials.map do |partial|
+        partials.values.map do |partial|
           partial.complete_with(from_node)
         end
       end.uniq
@@ -59,7 +59,7 @@ module LinkCommunity
 
     def neighbors_index(index)
       @neighbors_index ||= Array.new(nodes_size)
-      @neighbors_index[index] ||= edge_list.fetch(index, []).map(&:node)
+      @neighbors_index[index] ||= edge_list.fetch(index, {}).keys
     end
 
     def neighbors_node(node)
@@ -72,7 +72,7 @@ module LinkCommunity
     end
 
     def neighbors_partial(index)
-      edge_list.fetch(index, [])
+      edge_list.fetch(index, {}).values
     end
 
     def neighbors_me(index)
@@ -86,8 +86,8 @@ module LinkCommunity
     end
 
     def similarity(link1, link2)
-      link_a = edge_list[link1.a].find { |partial| partial.node == link1.b }.complete_with(link1.a)
-      link_b = edge_list[link2.a].find { |partial| partial.node == link2.b }.complete_with(link2.a)
+      link_a = edge_list[link1.a].fetch(link1.b).complete_with(link1.a)
+      link_b = edge_list[link2.a].fetch(link2.b).complete_with(link2.a)
       link_a.similarity_on(link_b, with: self)
     end
 
