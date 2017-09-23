@@ -95,5 +95,9 @@ module LinkCommunity
       slink = Slink.new(links_index)
       slink.call { |a, b| 1 - similarity(a, b) }
     end
+
+    def dendrogram
+      link_community.dendrogram.nodify_with(self)
+    end
   end
 end

@@ -58,7 +58,7 @@ describe Graph do
       end
     end
 
-    it "group the links", focus: true do
+    it "group the links" do
       expect(subject.link_community.dendrogram.map { |link| link.nodify_with(subject) })
         .to eq(Dendro(1, [
                         DLink(:a, :b, 2),
@@ -83,6 +83,149 @@ describe Graph do
                                  DLink(:b, :g, 2)
                                ])
                       ]))
+    end
+
+    context "with mutual connection" do
+      subject do
+        Graph.build do |g|
+          g.add(DLink(:a, :b, 99999),
+                DLink(:b, :a, 1))
+        end
+      end
+
+      it "should be 1" do
+        expect(subject.similarity_node(Link(:a, :b), Link(:b, :a))).to eq(1)
+      end
+    end
+
+    context "coming to the same vertex (and same weight)" do
+      subject do
+        Graph.build do |g|
+          g.add(DLink(:a, :b, 2),
+                DLink(:c, :b, 2))
+        end
+      end
+
+      it "should be 1/3" do
+        expect(subject.similarity_node(Link(:a, :b), Link(:c, :b))).to eq(1 / 3)
+      end
+    end
+
+    context "coming to two vertices (twice)" do
+      subject do
+        Graph.build do |g|
+          g.add(DLink(:a, :b, 2),
+                DLink(:c, :b, 2),
+                DLink(:a, :d, 2),
+                DLink(:c, :d, 2))
+        end
+      end
+
+      it "should be 1/2 (as they share 2 distinct nodes)" do
+        expect(subject.similarity_node(Link(:a, :b), Link(:c, :b))).to eq(1 / 2)
+        expect(subject.similarity_node(Link(:a, :d), Link(:c, :d))).to eq(1 / 2)
+      end
+    end
+
+    context "leaving the same vertex (and same weight)" do
+      subject do
+        Graph.build do |g|
+          g.add(DLink(:b, :a, 2),
+                DLink(:b, :c, 2))
+        end
+      end
+
+      it "should be 0 (they don't share any vertex)" do
+        expect(subject.similarity_node(Link(:b, :a), Link(:b, :c))).to eq(0)
+      end
+    end
+
+    context "leaving the same vertex and one extra connection (a)<-(b)->(c)->(a)" do
+      subject do
+        Graph.build do |g|
+          g.add(DLink(:b, :a, 2),
+                DLink(:b, :c, 2),
+                DLink(:c, :a, 2))
+        end
+      end
+
+      it "should be 0 (one link is not enough)" do
+        expect(subject.similarity_node(Link(:b, :a), Link(:b, :c))).to eq(0)
+      end
+    end
+
+    context "leaving the same vertex with cycle" do
+      subject do
+        Graph.build do |g|
+          g.add(DLink(:b, :a, 2),
+                DLink(:b, :c, 2),
+                DLink(:a, :c, 2),
+                DLink(:c, :a, 2))
+        end
+      end
+
+      it "should be 1 (they share the same vertex with same weight)" do
+        expect(subject.similarity_node(Link(:b, :a), Link(:b, :c))).to eq(1)
+      end
+    end
+
+    context "leaving the same vertex with extra node" do
+      subject do
+        Graph.build do |g|
+          g.add(DLink(:b, :a, 2),
+                DLink(:b, :c, 2),
+                DLink(:a, :d, 2),
+                DLink(:c, :d, 2))
+        end
+      end
+
+      it "should be 1/3 (they share a single vertex)" do
+        expect(subject.similarity_node(Link(:b, :a), Link(:b, :c))).to eq(1 / 3)
+      end
+    end
+
+    context "(a)->(c)<-(b), (a)->(d)<-(b), (a)->(b), (c)->(d)" do
+      subject do
+        Graph.build do |g|
+          g.add(DLink(:a, :c, 2),
+                DLink(:a, :d, 2),
+                DLink(:b, :c, 2),
+                DLink(:b, :d, 2),
+                DLink(:a, :b, 2),
+                DLink(:c, :d, 2))
+        end
+      end
+
+      it "is fairly connected!" do
+        expect(subject.similarity_node(Link(:a, :c), Link(:b, :c))).to eq(3 / 4)
+        expect(subject.similarity_node(Link(:a, :d), Link(:b, :d))).to eq(3 / 4)
+        expect(subject.similarity_node(Link(:a, :c), Link(:a, :d))).to eq(0)
+        expect(subject.similarity_node(Link(:b, :c), Link(:b, :d))).to eq(0)
+        expect(subject.similarity_node(Link(:c, :d), Link(:b, :d))).to eq(2 / 3)
+        expect(subject.similarity_node(Link(:a, :c), Link(:a, :b))).to eq(2 / 3)
+      end
+
+      describe "#dendrogram" do
+        it "detect community and creates the dendrogram" do
+          expect(subject.dendrogram)
+            .to eq(Dendro(1.00, [
+                            Dendro(0.33, [
+                                     DLink(:c, :d, 2),
+                                     Dendro(0.25, [
+                                              DLink(:a, :d, 2),
+                                              DLink(:b, :d, 2)
+                                            ])
+                                   ]),
+                            Dendro(0.33, [
+                                     DLink(:a, :b, 2),
+                                     Dendro(0.25, [
+                                              DLink(:a, :c, 2),
+                                              DLink(:b, :c, 2)
+                                            ])
+                                   ])
+                          ]))
+        end
+      end
     end
   end
 
