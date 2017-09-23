@@ -34,6 +34,7 @@ module LinkCommunity
     def find_node(index)
       nodes[index]
     end
+    alias node_of find_node
 
     def find_index(node)
       nodes.bsearch_index do |n|
@@ -42,6 +43,11 @@ module LinkCommunity
         else 0
         end
       end
+    end
+    alias index_of find_index
+
+    def [](a, b)
+      edge_list.fetch(a, nil)&.fetch(b, nil)&.complete_with(a)
     end
 
     def links_index
@@ -54,7 +60,7 @@ module LinkCommunity
     end
 
     def links_node
-      @links_node ||= links_index.map { |link| link.nodify_with(self) }.freeze
+      @links_node ||= links_index.map { |link| link.nodify_with(self) }
     end
 
     def neighbors_index(index)
@@ -80,6 +86,14 @@ module LinkCommunity
       @neighbors_me[index] ||= [index] + neighbors_index(index)
     end
 
+    def subgraph_with_indexes(indexes)
+      Graph.build do |builder|
+        indexes.to_a.permutation(2).flat_map do |a, b|
+          self[a, b]&.tap { |link| builder.add(link.nodify_with(self)) }
+        end
+      end
+    end
+
     def similarity_node(link1, link2)
       similarity(link1.indexify_with(self),
                  link2.indexify_with(self))
@@ -94,6 +108,10 @@ module LinkCommunity
     def link_community
       slink = Slink.new(links_index)
       slink.call { |a, b| 1 - similarity(a, b) }
+    end
+
+    def dendrogram
+      link_community.dendrogram.nodify_with(self)
     end
   end
 end

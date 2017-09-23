@@ -12,7 +12,7 @@ module LinkCommunity
       Graph.build do |graph|
         open(@file_name) do |file|
           CSV.new(file, headers: true).each do |row|
-            graph.add(Link(row[0], row[1], row[2].to_i))
+            graph.add(DLink(row[0], row[1], row[2].to_f))
           end
         end
       end

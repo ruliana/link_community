@@ -59,6 +59,7 @@ module LinkCommunity
     EMPTY = Dendro.new
 
     def ==(other)
+      return false unless other.is_a?(Dendro)
       ((level == other.level) ||
        (level - other.level).abs < 0.01) &&
         members == other.members &&
@@ -99,6 +100,11 @@ module LinkCommunity
       children.reduce(members.to_a) do |rslt, c|
         rslt + c.all_members
       end
+    end
+
+    def nodify_with(graph)
+      nodified = (members + children).map { |m| m.nodify_with(graph) }
+      Dendro(level, nodified)
     end
   end
 

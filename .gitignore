@@ -11,6 +11,7 @@
 # Data source and process result
 /data/
 /rslt/
+/infomap_rslt/
 
 *.dump
 test.rb

@@ -1,0 +1,178 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require "thor"
+require "link_community"
+require "csv"
+require "pp"
+
+class CLI < Thor
+
+  desc "all-the-way-down GRAPH_CSV_FILE", "Process all clusters and subclusters"
+  def all_the_way_down(csv_file_name)
+    puts csv_file_name
+    root = File.dirname(csv_file_name)
+
+    csv_to_csv(csv_file_name)
+    files = Dir.glob("#{root}/group-*.csv")
+    files.reject { |f| File.exist?(new_file_name(f, "*.txt")) }
+         .select { |f| possible_improvement?(f, files) }
+         .each { |f| all_the_way_down(f) }
+  end
+
+  desc "split TREE_FILE", "Splits the corresponding ABC file in groups defined by TREE_FILE"
+  def split(tree_file_name, csv_file_name = new_file_name(tree_file_name, "*.csv"))
+    parent_group = tree_file_name.match(/group-\d+((?:-\d+)+)/)&.captures&.first || ""
+    graph = read_graph(csv_file_name)
+    tree = read_tree(tree_file_name)
+
+    tree.each do |community, node_indexes|
+      next if node_indexes.size <= 3
+      subgraph = graph.subgraph_with_indexes(node_indexes)
+
+      group_name = parent_group + "-" + community.tr(":", "-")
+      file_name = format("group-%05d%s", node_indexes.size, group_name)
+      edge_list_file_name = new_file_name(tree_file_name, "#{file_name}.csv")
+      GraphToCsv.new(subgraph).to_csv(edge_list_file_name)
+    end
+  end
+
+  desc "abc GRAPH_CSV_FILE", "Turn CSV edge file into an ABC file"
+  def abc(csv_file_name)
+    graph = read_graph(csv_file_name)
+
+    tree_file_name = new_file_name(csv_file_name, "*.txt")
+    open(tree_file_name, "w") do |file|
+      graph.links_index.each do |link|
+        file.printf("%d %d %d\n",
+                    link.a,
+                    link.b,
+                    link.weight)
+      end
+    end
+  end
+
+  desc "namefy TREE_FILE GRAPH_CSV_FILE", "Replace the indexes of a .tree file with the actual names"
+  def namefy(tree_file_name, csv_file_name = new_file_name(tree_file_name, "*.csv"))
+    graph = read_graph(csv_file_name)
+
+    translated_file = new_file_name(tree_file_name, "*.tree_named")
+    open(translated_file, "w") do |out|
+      File.foreach(tree_file_name) do |line|
+        line = line.sub(/"([^"]+)"/) { %("#{graph.node_of($1.to_i)}") }
+        out.puts(line)
+      end
+    end
+  end
+
+  desc "to-json JSON_FILE GRAPH_CSV_FILE... ", "convert graph csv files to json"
+  def to_json(json_file_name, *csv_file_names)
+    node_format = "  {\"id\": \"%s\", \"group\": [%s]}"
+    link_format = %(  {"source": "%s", "target": "%s", "value": %d})
+
+    graphs = csv_file_names.each do |csv_file_name|
+      [extract_group_from_file(csv_file_name), read_graph(csv_file_name)]
+    end
+
+    nodes = graphs.map { |group, graph| [group, graph.nodes] }
+                  .reduce(Hash.new { |h, k| h[k] = [] }) do |(group, ns), rslt|
+                    ns.each { |n| rslt[n] << group }
+                  end
+    links = graphs.flat_map(&:links_index).uniq
+
+    open(json_file_name, "w") do |out|
+      out.puts "{"
+
+      # Nodes
+      out.puts %( "nodes": [)
+      head = true
+
+      nodes.each do |node, groups|
+        if head then head = false
+        else out.puts(",")
+        end
+        out.printf(node_format, node, groups.join(", "))
+      end
+      out.puts %( ],)
+
+      # Links
+      out.puts %( "links": [)
+      head = true
+      links.each do |link|
+        next if tree.communities_for(link.a).empty?
+        next if tree.communities_for(link.b).empty?
+        link = link.nodify_with(graph)
+
+        if head then head = false
+        else out.puts(",")
+        end
+        out.printf(link_format, link.a, link.b, link.weight)
+      end
+      out.puts %( ])
+
+      out.puts "}"
+    end
+  end
+
+  private
+
+  # File has the same number of nodes of a parent
+  def possible_improvement?(file, files)
+    number, group = file.match(/group-(\d+)((?:-\d+)+)/)&.captures
+    return false if number.nil?
+    return false if number.to_i < 10
+
+    numbers_and_groups = files.map { |f| f.match(/group-(\d+)((?:-\d+)+)/)&.captures }
+
+    # already processed
+    return false if numbers_and_groups.any? { |_n, g| g.match?(/^#{group}-\d+/) }
+
+    prefix = group.sub(/-\d+$/, "")
+    gs = numbers_and_groups.select { |_n, g| g.match?(/^#{prefix}-\d+/) }
+    gs.size > 1
+  end
+
+  def csv_to_csv(csv)
+    txt = new_file_name(csv, "*.txt")
+    tree = new_file_name(csv, "*.tree")
+    root = File.dirname(csv)
+
+    abc(csv) unless File.exist?(txt)
+    `Infomap #{txt} #{root} -z -d --overlapping --tree` unless File.exist?(tree)
+    split(tree)
+  end
+
+  def extract_group_from_file(file_name)
+    group = file_name.match(/group-\d+((?:-\d+)+)/)&.captures
+    return nil if group.nil?
+    group.sub(/^-/, "").tr("-", ":")
+  end
+
+  def extract_group_and_index(line)
+    if line.match?(/^\s*#/)
+      []
+    else
+      group, _flow, _name, index = line.chomp.split(/\s+/)
+      group = group.gsub(/:[^:]+$/, "")
+      [[group, index]]
+    end
+  end
+
+  def read_tree(tree_file_name)
+    TreeFile.read(tree_file_name)
+  end
+
+  def read_graph(csv_file_name)
+    CsvToGraph.new(csv_file_name).to_graph
+  end
+
+  def new_file_name(file_name, new_name)
+    match = new_name.match(/^\*(\.\w+)$/)
+    new_name = File.basename(file_name, ".*") + match[1] if match
+
+    File.join(File.dirname(file_name), new_name)
+  end
+end
+
+CLI.start(ARGV)

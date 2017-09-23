@@ -6,16 +6,51 @@ require "thor"
 require "link_community"
 
 class CLI < Thor
-  COLORS = %w[/dark26/1 /dark26/2 /dark26/3 /dark26/4 /dark26/5 /dark26/6].freeze
+  COLOR_BASE = "/set1%d/%d".freeze
+
+  desc "collect SOURCE_DIR WORD", "collect dot files with word from source, copy to \"group_WORD\" dir and generate PDF"
+  def collect(source_dir, word)
+    dest = "group_#{word.gsub(/\W/, "_")}"
+    `mkdir -p #{dest}`
+    `cp $(grep -l '"#{word}"' #{source_dir}/*.dot) #{dest}`
+    pdf(dest)
+  end
+
+  desc "pdf SOURCE_DIR", "generate a single PDF from a dir with dot files"
+  def pdf(source_dir)
+    source_dir = source_dir.gsub(%r(/$), "")
+    `rm -f #{source_dir}/#{source_dir}.*`
+    files = Dir.glob("#{source_dir}/*.dot")
+    begin
+      $stdout = open("#{source_dir}/#{source_dir}.dot", "w")
+      merge(*files)
+    ensure
+      $stdout.close if $stdout && !$stdout.closed?
+      $stdout = STDOUT
+    end
+    `sfdp -Tpdf -o#{source_dir}/#{source_dir}.pdf #{source_dir}/#{source_dir}.dot`
+  end
 
   desc "merge DOT_FILES...", "Merge up to 6 dot files"
   def merge(*files)
+    colors = colors_for(files)
+
     header = extract_header(files.first)
     footer = "}\n"
 
     middle = files.map { |f| extract_middle(f) }
-    middle = middle.zip(COLORS).flat_map do |mid, color|
-      mid.map { |line| line.sub(/;$/, %( [color="#{color}"];)) }
+    middle.sort_by! { |lines| lines.size }
+    middle.combination(2) { |smaller, bigger| bigger.delete_if { |e| smaller.include?(e) } }
+    middle.reverse!
+    middle = middle.zip(colors).flat_map do |mid, color|
+      color ||= "gray"
+      mid.map do |line|
+        if line.match?(/\]/)
+          line.sub(/\]/, %(, color="#{color}"]))
+        else
+          line.sub(/;$/, %( [color="#{color}"];))
+        end
+      end
     end
 
     puts header
@@ -25,10 +60,19 @@ class CLI < Thor
 
   private
 
+  def colors_for(files)
+    how_many_colors = [[3, files.size - 1].max, 9].min
+    ["black"] + (1..how_many_colors).map { |i| format(COLOR_BASE, how_many_colors, i) }
+  end
+
   def extract_header(file)
-    open(File.join(Dir.pwd, file), "r") do |f|
+    rslt = open(File.join(Dir.pwd, file), "r") do |f|
       f.each_line.take_while { |line| line !~ /->/ }
     end
+    rslt << "\toverlap = scale;"
+    rslt << "\toutputorder = edgesfirst;"
+    rslt << "\tnode [style=filled fillcolor=white];"
+    rslt.uniq
   end
 
   def extract_middle(file)

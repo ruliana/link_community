@@ -78,7 +78,9 @@ module LinkCommunity
       a_norm_squared = a_weights.sum { |_k, v| v**2 }
       b_norm_squared = b_weights.sum { |_k, v| v**2 }
 
-      dot_prod / (a_norm_squared + b_norm_squared - dot_prod)
+      all = (a_norm_squared + b_norm_squared - dot_prod)
+
+      all.zero? ? 0 : dot_prod / all
     end
 
     def weights_for(graph, index)

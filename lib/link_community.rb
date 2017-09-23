@@ -53,4 +53,6 @@ require "link_community/algorithms/slink"
 
 # Utilities
 require "link_community/csv_to_graph"
+require "link_community/graph_to_csv"
 require "link_community/extra/console_monitor"
+require "link_community/infomap/tree_file"
