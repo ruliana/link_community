@@ -38,6 +38,24 @@ class CLI < Thor
     end
   end
 
+  desc "pajek GRAPH_CSV_FILE", "Turn CSV edge file into PAJEK format (.net)"
+  def pajek(csv_file_name)
+    graph = read_graph(csv_file_name)
+
+    pajek_file_name = new_file_name(csv_file_name, "*.net")
+    open(pajek_file_name, "w") do |file|
+      file.puts "*Vertices #{graph.nodes.size}"
+      graph.nodes.each_with_index do |node, index|
+        file.puts %(#{index + 1} "#{node}")
+      end
+
+      file.puts "*Edges #{graph.links_index.size}"
+      graph.links_index.each do |link|
+        file.puts "#{link.a + 1} #{link.b + 1} #{link.weight}"
+      end
+    end
+  end
+
   desc "abc GRAPH_CSV_FILE", "Turn CSV edge file into an ABC file"
   def abc(csv_file_name)
     graph = read_graph(csv_file_name)
@@ -64,6 +82,19 @@ class CLI < Thor
         out.puts(line)
       end
     end
+  end
+
+  desc "find-duplicates TREE_FILE", "Find things in multiple groups (try it on a .tree_named file)"
+  def find_duplicates(tree_file_name)
+    rslt = Hash.new { |h, k| h[k] = [] }
+    File.foreach(tree_file_name) do |line|
+      matches = line.match(/^(?<group>\d+(?::\d+)*) \S+ "(?<name>[^"]+)"/)&.named_captures
+      next if matches.nil?
+      rslt[matches["name"]] << matches["group"]
+    end
+    rslt.reject! { |_k, v| v.size == 1 }
+    rslt = rslt.sort_by { |k, v| [-v.size, k] }
+    rslt.each { |e| puts e.flatten.join("\t") }
   end
 
   desc "to-json JSON_FILE GRAPH_CSV_FILE... ", "convert graph csv files to json"

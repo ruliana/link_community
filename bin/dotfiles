@@ -4,9 +4,26 @@
 require "bundler/setup"
 require "thor"
 require "link_community"
+require "csv"
+require "json"
 
 class CLI < Thor
   COLOR_BASE = "/set1%d/%d".freeze
+
+  desc "csv-dot CSV_FILE", "covert CSV file to Graphviz DOT"
+  def csv_dot(csv_file)
+    _header, *lines = CSV.readlines(csv_file)
+    lines = lines.map { |from, to, _weight| format(%(  "%s" -> "%s";), from, to) }
+    lines = ["digraph G {",
+             "  splines=ortho;",
+             "  concentrate=true;",
+             "  rankdir=BT;"] +
+            lines +
+            ["}"]
+
+    dot_file = csv_file.sub(/\.csv$/, ".dot")
+    File.write(dot_file, lines.join("\n"))
+  end
 
   desc "collect SOURCE_DIR WORD", "collect dot files with word from source, copy to \"group_WORD\" dir and generate PDF"
   def collect(source_dir, word)
@@ -56,6 +73,35 @@ class CLI < Thor
     puts header
     puts middle
     puts footer
+  end
+
+  desc "cargos-norm-json-to-csv-slug JSON_FILE", "convert this to that (this should be throwaway code)"
+  def cargos_norm_json_to_csv_slug(json_file)
+    csv_file = json_file.sub(/\.json$/, ".csv")
+    CSV.open(csv_file, "w") do |output|
+      File.foreach(json_file) do |row|
+        norm, name = JSON.parse(row)
+        slug = name.unicode_normalize(:nfkd)
+                   .gsub(/[^\x00-\x7F]/, "")
+                   .downcase
+                   .gsub(/[^a-z0-9]+/, " ")
+                   .strip
+                   .tr(" ", "-")
+        output << [norm, slug, name]
+      end
+    end
+  end
+
+  desc "cargos-norm-edge-csv CSV_NORM CSV_EDGE_LIST", "slugfy the edge list csv"
+  def cargos_norm_edge_csv(csv_norm, csv_edge)
+    rslt_file = csv_edge.sub(/\.csv$/, "2.csv")
+    dict = CSV.read(csv_norm).map { |norm, slug, _| [norm, slug] }.to_h
+    options = {headers: %w[from to weight], write_headers: true}
+    CSV.open(rslt_file, "w", options) do |output|
+      CSV.table(csv_edge).each do |row|
+        output << [dict.fetch(row[:from]), dict.fetch(row[:to]), row[:weight]]
+      end
+    end
   end
 
   private
